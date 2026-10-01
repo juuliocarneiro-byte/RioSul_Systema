@@ -411,6 +411,38 @@ async def update_user(uid: str, body: UserUpd, user=Depends(require_admin)):
     await db.users.update_one({"id": uid}, {"$set": upd})
     return await db.users.find_one({"id": uid}, {"password_hash": 0, "_id": 0})
 
+@api.delete("/users/{uid}/hard")
+async def delete_user_cascade(uid: str, user=Depends(require_admin)):
+    if uid == user["id"]:
+        raise HTTPException(400, "Não é possível excluir o próprio usuário")
+    employee = await db.users.find_one({"id": uid})
+    if not employee:
+        raise HTTPException(404, "Funcionário não encontrado")
+
+    sales = await db.sales.find({"seller_id": uid}, {"id": 1, "attachments": 1}).to_list(10000)
+    sale_ids = [sale["id"] for sale in sales]
+    upload_urls = [url for sale in sales for url in sale.get("attachments", [])]
+    vales_count = await db.vales.count_documents({"user_id": uid})
+    shopee_orders = await db.shopee_orders.find({"user_id": uid}, {"id": 1, "document_url": 1, "images": 1}).to_list(10000)
+    for order in shopee_orders:
+        upload_urls.extend([order.get("document_url", ""), *order.get("images", [])])
+
+    if sale_ids:
+        await db.audit_logs.delete_many({"sale_id": {"$in": sale_ids}})
+        await db.sales.delete_many({"seller_id": uid})
+    await db.vales.delete_many({"user_id": uid})
+    await db.shopee_orders.delete_many({"user_id": uid})
+    await db.audit_logs.delete_many({"user_id": uid})
+    await db.users.delete_one({"id": uid})
+
+    for url in upload_urls:
+        filename = str(url).rsplit("/", 1)[-1]
+        if filename and "/" not in filename and ".." not in filename:
+            path = UPLOADS_DIR / filename
+            if path.exists(): path.unlink()
+
+    return {"ok": True, "deleted_sales": len(sale_ids), "deleted_vales": vales_count, "deleted_shopee_orders": len(shopee_orders)}
+
 # ---------- Categories ----------
 class CatIn(BaseModel):
     name: str; order: int = 0; active: bool = True; image_url: Optional[str] = ""
