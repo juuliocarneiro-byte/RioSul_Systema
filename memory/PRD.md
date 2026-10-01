@@ -54,10 +54,11 @@ Sistema web completo para gestão de vendas, pedidos, clientes, funcionários e 
 - Backend: `PUT /api/sales/{sid}/status` grava `delivered_at` (ISO now) ao mover para ENTREGUE e faz `$unset` caso saia de ENTREGUE. Dados históricos preservados.
 - Lista (view "Lista") também respeita busca/filtros.
 
-## Etapa 4 (2026-02) — Exclusão permanente + Venda Balcão + Logo
-- **Vendas**: ícone de lixeira ao lado do olho (apenas em pedidos CANCELADO, admin) → modal Sim/Não → `DELETE /api/sales/{sid}/hard` (backend rejeita se não estiver cancelado).
-- **Clientes**: ícone de lixeira ao lado de "Histórico" (admin) → modal Sim/Não → `DELETE /api/customers/{cid}` (backend rejeita se houver pedidos vinculados).
-- **Nova Venda / Balcão**: cliente agora é opcional. Novo toggle "Enviar para Produção / Pedidos" (default ON). Quando OFF, a venda entra em Vendas, Caixa e Relatórios, mas é filtrada do Kanban de Pedidos.
-- Backend: campo novo `send_to_production: bool = True` em `SaleIn`. Frontend Pedidos filtra `send_to_production !== false` (dados históricos preservados).
-- Logo maior (56px) no sidebar. Favicon da aba aponta para `/riosul-logo.png`.
+## Etapa 5 (2026-02) — Exclusão de Funcionário com Cascata
+- Funcionários agora têm lixeira ao lado do botão de edição, disponível na tela administrativa.
+- Modal Sim/Não avisa que a exclusão é permanente e detalha o que será removido.
+- `DELETE /api/users/{uid}/hard` permite apenas admin, bloqueia autoexclusão e remove o usuário, vendas vinculadas, vales, pedidos Shopee importados por ele, auditorias relacionadas e arquivos anexados.
+- Clientes e produtos compartilhados não são removidos automaticamente, pois podem estar vinculados a outros registros.
+- Testado pelo testing agent: backend 6/6 testes, frontend smoke + fluxo completo de confirmação aprovados.
+
 

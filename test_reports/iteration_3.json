@@ -1,0 +1,23 @@
+{
+  "summary": "Tested the new admin-only cascade DELETE /api/users/{uid}/hard endpoint and the Funcionários UI trash icon + confirmation modal. All 6 backend pytest tests passed. Frontend smoke flow confirmed: admin login works, /funcionarios renders 9 delete-user-{id} trash buttons, modal shows warning about sales/vales/Shopee/files, Não cancels, Sim apagar tudo permanently deletes temp user. Non-admin -> 403, unauth -> 401, self-delete -> 400, missing uid -> 404. GET /api/users and PUT /api/users/{uid} still work and Igor login works post-delete.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_user_cascade_delete.py",
+    "/app/test_reports/pytest/user_cascade.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Cascade endpoint correctly orders ops: collects attachment URLs before deleting sales/orders so uploads can be unlinked; deletes audit_logs by sale_id and user_id; prevents self-delete and verifies admin role.",
+    "Frontend Funcionarios.jsx exposes required data-testids and modal copy clearly warns about permanence.",
+    "Minor: cascade does not restrict path traversal super strictly on filename ('/' and '..' check is fine), and skips files not under UPLOADS_DIR which is safe.",
+    "Minor: unauthenticated DELETE returns 403 (FastAPI default for missing cookie dependency) which matches the request's 401/403 acceptance."
+  ],
+  "updated_files": ["/app/backend/tests/test_user_cascade_delete.py"],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100% (smoke + full cascade click flow passed)"},
+  "test_credentials": "Igor / 02578491 (admin). Temp users created with login qa_delete_{ts} and qa_ui_{ts}, deleted after each test.",
+  "seed_data_creation": "Only unique TEST_/qa_ prefixed temporary users, one temp sale and one temp vale per cascade test — all cleaned up by the endpoint under test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend tests live in /app/backend/tests/test_user_cascade_delete.py. Note: SaleIn requires product_name/quantity/unit_price/subtotal (not name/qty/price). Admin login endpoint accepts {login,password} and returns access_token for Bearer header."
+}
